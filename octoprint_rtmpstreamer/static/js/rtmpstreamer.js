@@ -9,6 +9,7 @@ $(function () {
 		self.auto_start = ko.observable();
 		self.streaming = ko.observable();
 		self.processing = ko.observable(false);
+		self.ffmpegArguments = ko.observable();
 		self.icon = ko.pureComputed(function() {
 										var icons = [];
 										if (self.streaming() && !self.processing()) {
@@ -27,13 +28,18 @@ $(function () {
 									});
 		self.btnclass = ko.pureComputed(function() {
 										return self.streaming() ? 'btn-danger' : 'btn-primary';
-									});									
+									});	
+
+		self.run_cmd = ko.pureComputed(function() {
+										return self.settingsViewModel.settings.webcam.ffmpeg() + ' ' + self.settingsViewModel.settings.plugins.rtmpstreamer.ffmpegArguments() + ' ' + self.settingsViewModel.settings.plugins.rtmpstreamer.stream_url()
+									});
 
 		self.onBefireBinding = function () {
 			self.stream_resolution(self.settingsViewModel.settings.plugins.rtmpstreamer.stream_resolution());
 			// self.view_url(self.settingsViewModel.settings.plugins.rtmpstreamer.view_url());
 			self.stream_url(self.settingsViewModel.settings.plugins.rtmpstreamer.stream_url());
 			self.auto_start(self.settingsViewModel.settings.plugins.rtmpstreamer.auto_start());
+			self.ffmpegArguments(self.settingsViewModel.settings.plugins.rtmpstreamer.ffmpegArguments());
 		};
 
 		self.onEventSettingsUpdated = function (payload) {            
@@ -41,6 +47,7 @@ $(function () {
 			// self.view_url(self.settingsViewModel.settings.plugins.rtmpstreamer.view_url());
 			self.stream_url(self.settingsViewModel.settings.plugins.rtmpstreamer.stream_url());
 			self.auto_start(self.settingsViewModel.settings.plugins.rtmpstreamer.auto_start());
+			self.ffmpegArguments(self.settingsViewModel.settings.plugins.rtmpstreamer.ffmpegArguments());
         };
 		
 		self.onAfterBinding = function() {

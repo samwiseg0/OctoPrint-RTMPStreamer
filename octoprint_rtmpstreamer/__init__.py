@@ -3,7 +3,7 @@ from __future__ import absolute_import
 
 import octoprint.plugin
 from octoprint.server import user_permission
-import docker
+import subprocess
 
 class rtmpstreamer(octoprint.plugin.StartupPlugin,
 				octoprint.plugin.TemplatePlugin,
@@ -11,21 +11,20 @@ class rtmpstreamer(octoprint.plugin.StartupPlugin,
                 octoprint.plugin.SettingsPlugin,
 				octoprint.plugin.SimpleApiPlugin,
 				octoprint.plugin.EventHandlerPlugin):
-	
+				
 	def __init__(self):
-		self.client = docker.from_env()
 		self.container = None
 	
 	##~~ StartupPlugin
 	def on_after_startup(self):
-		self._logger.info("OctoPrint-RTMPStreamer loaded! Checking stream status.")
-		try:
-			self.container = self.client.containers.get('RTMPStreamer')
-			self._logger.info("%s is streaming " % self.container.name)
-			self._plugin_manager.send_plugin_message(self._identifier, dict(status=True,streaming=True))
-		except Exception, e:
-			self._logger.error(str(e))
-			self._plugin_manager.send_plugin_message(self._identifier, dict(status=True,streaming=False))
+		self._logger.info("OctoPrint-RTMPStreamer loaded!")
+		# try:
+			# self.container = self.client.containers.get('RTMPStreamer')
+			# self._logger.info("%s is streaming " % self.container.name)
+			# self._plugin_manager.send_plugin_message(self._identifier, dict(status=True,streaming=True))
+		# except Exception, e:
+			# self._logger.error(str(e))
+			# self._plugin_manager.send_plugin_message(self._identifier, dict(status=True,streaming=False))
 	
 	##~~ TemplatePlugin
 	def get_template_configs(self):
@@ -48,7 +47,7 @@ class rtmpstreamer(octoprint.plugin.StartupPlugin,
 		
 	##~~ SettingsPlugin
 	def get_settings_defaults(self):
-		return dict(view_url="",stream_url="",stream_resolution="640x480",stream_framerate="5",streaming=False,auto_start=False)
+		return dict(view_url="",stream_url="",stream_resolution="640x480",stream_framerate="5",streaming=False,auto_start=False,ffmpegArguments="-re -f mjpeg -r 5 -i http://localhost:8080/?action=stream -ar 44100 -ac 2 -acodec pcm_s16le -f s16le -ac 2 -i /dev/zero -acodec aac -ab 128k -strict experimental -s 640x480 -vcodec h264 -pix_fmt yuv420p -g 10 -vb 700k -r 5 -f flv -filter:v null")
 		
 	##~~ SimpleApiPlugin	
 	def get_api_commands(self):
@@ -86,7 +85,10 @@ class rtmpstreamer(octoprint.plugin.StartupPlugin,
 			if len(filters) == 0:
 				filters.append("null")
 			try:
-				self.container = self.client.containers.run("octoprint/rtmpstreamer:latest",command=[self._settings.global_get(["webcam","stream"]),self._settings.get(["stream_resolution"]),self._settings.get(["stream_framerate"]),self._settings.get(["stream_url"]),",".join(filters)],detach=True,privileged=True,name="RTMPStreamer",auto_remove=True)
+				#self.container = self.client.containers.run("octoprint/rtmpstreamer:latest",command=[self._settings.global_get(["webcam","stream"]),self._settings.get(["stream_resolution"]),self._settings.get(["stream_framerate"]),self._settings.get(["stream_url"]),",".join(filters)],detach=True,privileged=True,name="RTMPStreamer",auto_remove=True)
+				command_line = "%s %s %s" % (self._settings.global_get(["webcam","ffmpeg"]),self._settings.get(["ffmpegArguments"]),self._settings.get(["stream_url"]))
+				self._logger.info(command_line)
+				self.container = subprocess.Popen(command_line)
 				self._plugin_manager.send_plugin_message(self._identifier, dict(status=True,streaming=True))
 			except Exception, e:
 				self._plugin_manager.send_plugin_message(self._identifier, dict(error=str(e),status=True,streaming=False))	
@@ -94,7 +96,7 @@ class rtmpstreamer(octoprint.plugin.StartupPlugin,
 	def stopStream(self):
 		if self.container:
 			try:
-				self.container.stop()
+				self.container.terminate()
 				self.container = None
 				self._plugin_manager.send_plugin_message(self._identifier, dict(status=True,streaming=False))
 			except Exception, e:
