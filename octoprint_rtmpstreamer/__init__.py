@@ -101,12 +101,12 @@ class rtmpstreamer(octoprint.plugin.StartupPlugin,
                 ffmpeg_cmd = '{} -re -f mjpeg -framerate {} -i {} -ar 44100 -ac 2 -acodec pcm_s16le -f s16le -ac 2 -i ' \
                              '/dev/zero -acodec aac -ab 128k -strict experimental -s {} -vcodec h264 -pix_fmt yuv420p ' \
                              '-g 10 -vb 700k -framerate {} -f flv -filter:v {} {}'.format(FFMPEG,
-                                                                                                         framerate,
-                                                                                                         webcam_stream,
-                                                                                                         stream_resolution,
-                                                                                                         framerate,
-                                                                                                         filters,
-                                                                                                         rtmp_stream_url)
+                                                                                          framerate,
+                                                                                          webcam_stream,
+                                                                                          stream_resolution,
+                                                                                          framerate,
+                                                                                          filters,
+                                                                                          rtmp_stream_url)
                 # Start the ffmpeg subprocess
                 self.ffmpeg = subprocess.Popen(ffmpeg_cmd.split(' '), stdin=subprocess.PIPE,
                                                         stdout=subprocess.PIPE, stderr=FNULL)
