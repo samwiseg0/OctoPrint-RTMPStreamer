@@ -108,8 +108,9 @@ class rtmpstreamer(octoprint.plugin.StartupPlugin,
                                                                                           filters,
                                                                                           rtmp_stream_url)
                 # Start the ffmpeg subprocess
-                self.ffmpeg = subprocess.Popen(ffmpeg_cmd.split(' '), stdin=subprocess.PIPE,
-                                                        stdout=subprocess.PIPE, stderr=FNULL)
+                self.ffmpeg = subprocess.Popen(ffmpeg_cmd, stdin=subprocess.PIPE,
+                                               stdout=subprocess.PIPE,
+                                               stderr=subprocess.STDOUT)
                 self._plugin_manager.send_plugin_message(self._identifier, dict(status=True, streaming=True))
             except Exception as e:
                 self._plugin_manager.send_plugin_message(self._identifier,
@@ -118,7 +119,7 @@ class rtmpstreamer(octoprint.plugin.StartupPlugin,
     def stopStream(self):
         if self.ffmpeg:
             try:
-                os.kill(self.ffmpeg.pid, signal.SIGKILL)
+                os.killpg(os.getpgid(self.ffmpeg.pid), signal.SIGTERM)
                 self.ffmpeg = None
                 self._plugin_manager.send_plugin_message(self._identifier, dict(status=True, streaming=False))
             except Exception as e:
@@ -157,7 +158,7 @@ class rtmpstreamer(octoprint.plugin.StartupPlugin,
 
 
 __plugin_name__ = "RTMP Streamer"
-__plugin_pythoncompat__ = ">=2.7,<4"
+__plugin_pythoncompat__ = "<4"
 
 
 def __plugin_load__():
