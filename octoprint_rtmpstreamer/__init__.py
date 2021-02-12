@@ -7,6 +7,7 @@ import signal
 import subprocess
 from octoprint.server import user_permission
 
+FFMPEG = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bin', 'ffmpeg')
 
 class rtmpstreamer(octoprint.plugin.StartupPlugin,
                    octoprint.plugin.TemplatePlugin,
@@ -16,20 +17,11 @@ class rtmpstreamer(octoprint.plugin.StartupPlugin,
                    octoprint.plugin.EventHandlerPlugin):
 
     def __init__(self):
-        self.client = docker.from_env()
-        self.container = None
+        self.ffmpeg = None
 
     ##~~ StartupPlugin
     def on_after_startup(self):
-        self._logger.info("OctoPrint-RTMPStreamer loaded! Checking stream status.")
-        try:
-            self.container = self.client.containers.get('RTMPStreamer')
-            self._logger.info("%s is streaming " % self.container.name)
-            self._plugin_manager.send_plugin_message(self._identifier, dict(status=True, streaming=True))
-        except Exception as e:
-            self._logger.error(str(e))
-            self._plugin_manager.send_plugin_message(self._identifier, dict(status=True, streaming=False))
-
+        self._logger.info("OctoPrint-RTMPStreamer loaded!")
         if self._settings.get(["auto_start_on_power_up"]) and self._settings.get(["stream_url"]) != "":
             self._logger.info("Auto starting stream on start up.")
             self.startStream()
@@ -76,7 +68,7 @@ class rtmpstreamer(octoprint.plugin.StartupPlugin,
             self.stopStream()
         if command == 'checkStream':
             self._logger.info("Checking stream status.")
-            if self.container:
+            if self.ffmpeg:
                 self._plugin_manager.send_plugin_message(self._identifier, dict(status=True, streaming=True))
             else:
                 self._plugin_manager.send_plugin_message(self._identifier, dict(status=True, streaming=False))
@@ -89,7 +81,7 @@ class rtmpstreamer(octoprint.plugin.StartupPlugin,
                 status=True, streaming=False))
             return
 
-        if not self.container:
+        if not self.ffmpeg:
             filters = []
             if self._settings.global_get(["webcam", "flipH"]):
                 filters.append("hflip")
@@ -100,24 +92,33 @@ class rtmpstreamer(octoprint.plugin.StartupPlugin,
             if len(filters) == 0:
                 filters.append("null")
             try:
-                self.container = self.client.containers.run("octoprint/rtmpstreamer:latest",
-                                                            command=[self._settings.global_get(["webcam", "stream"]),
-                                                                     self._settings.get(["stream_resolution"]),
-                                                                     self._settings.get(["stream_framerate"]),
-                                                                     self._settings.get(["stream_url"]),
-                                                                     ",".join(filters)], detach=True, privileged=False,
-                                                            devices=["/dev/vchiq"], name="RTMPStreamer",
-                                                            auto_remove=True, network_mode="host")
+                # Define settings variables
+                webcam_stream = str(self._settings.global_get(["webcam", "stream"]))
+                stream_resolution = str(self._settings.get(["stream_resolution"]))
+                framerate = str(self._settings.get(["stream_framerate"]))
+                rtmp_stream_url = str(self._settings.get(["stream_url"]))
+                # Define the FFMPEG command to run
+                ffmpeg_cmd = '{} -re -f mjpeg -framerate $3 -i {} -ar 44100 -ac 2 -acodec pcm_s16le -f s16le -ac 2 -i ' \
+                             '/dev/zero -acodec aac -ab 128k -strict experimental -s {} -vcodec h264 -pix_fmt yuv420p ' \
+                             '-g 10 -vb 700k -framerate $3 -f flv -filter:v {} {}'.format(FFMPEG,
+                                                                                          webcam_stream,
+                                                                                          stream_resolution,
+                                                                                          framerate,
+                                                                                          filters,
+                                                                                          rtmp_stream_url)
+                # Start the ffmpeg subprocess
+                self.ffmpeg = subprocess.Popen(ffmpeg_cmd.split(' '), stdin=subprocess.PIPE,
+                                                        stdout=subprocess.PIPE, stderr=FNULL)
                 self._plugin_manager.send_plugin_message(self._identifier, dict(status=True, streaming=True))
             except Exception as e:
                 self._plugin_manager.send_plugin_message(self._identifier,
                                                          dict(error=str(e), status=True, streaming=False))
 
     def stopStream(self):
-        if self.container:
+        if self.ffmpeg:
             try:
-                self.container.stop()
-                self.container = None
+                os.kill(self.ffmpeg.pid, signal.SIGKILL)
+                self.ffmpeg = None
                 self._plugin_manager.send_plugin_message(self._identifier, dict(status=True, streaming=False))
             except Exception as e:
                 self._plugin_manager.send_plugin_message(self._identifier,
