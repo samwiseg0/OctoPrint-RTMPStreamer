@@ -98,14 +98,15 @@ class rtmpstreamer(octoprint.plugin.StartupPlugin,
                 framerate = str(self._settings.get(["stream_framerate"]))
                 rtmp_stream_url = str(self._settings.get(["stream_url"]))
                 # Define the FFMPEG command to run
-                ffmpeg_cmd = '{} -re -f mjpeg -framerate $3 -i {} -ar 44100 -ac 2 -acodec pcm_s16le -f s16le -ac 2 -i ' \
+                ffmpeg_cmd = '{} -re -f mjpeg -framerate {} -i {} -ar 44100 -ac 2 -acodec pcm_s16le -f s16le -ac 2 -i ' \
                              '/dev/zero -acodec aac -ab 128k -strict experimental -s {} -vcodec h264 -pix_fmt yuv420p ' \
-                             '-g 10 -vb 700k -framerate $3 -f flv -filter:v {} {}'.format(FFMPEG,
-                                                                                          webcam_stream,
-                                                                                          stream_resolution,
-                                                                                          framerate,
-                                                                                          filters,
-                                                                                          rtmp_stream_url)
+                             '-g 10 -vb 700k -framerate {} -f flv -filter:v {} {rtmp_stream_url}'.format(FFMPEG,
+                                                                                                         framerate,
+                                                                                                         webcam_stream,
+                                                                                                         stream_resolution,
+                                                                                                         framerate,
+                                                                                                         filters,
+                                                                                                         rtmp_stream_url)
                 # Start the ffmpeg subprocess
                 self.ffmpeg = subprocess.Popen(ffmpeg_cmd.split(' '), stdin=subprocess.PIPE,
                                                         stdout=subprocess.PIPE, stderr=FNULL)
