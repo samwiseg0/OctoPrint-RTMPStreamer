@@ -77,8 +77,8 @@ class rtmpstreamer(octoprint.plugin.StartupPlugin,
     def startStream(self):
         if self._settings.global_get(["webcam", "stream"]).startswith("/"):
             self._plugin_manager.send_plugin_message(self._identifier, dict(
-                error="Webcam stream url is incorrect.  Please configure OctoPrint's Webcam & Timelapse url to include fullly qualified url, like http://192.168.0.2/webcam/?action=stream",
-                status=True, streaming=False))
+                error="Webcam stream url is incorrect.  Please configure OctoPrint's Webcam & Timelapse url to include "
+                      "fullly qualified url, like http://192.168.0.2/webcam/?action=stream", status=True, streaming=False))
             return
 
         if not self.ffmpeg:
