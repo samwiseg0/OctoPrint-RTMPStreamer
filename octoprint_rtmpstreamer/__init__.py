@@ -100,7 +100,7 @@ class rtmpstreamer(octoprint.plugin.StartupPlugin,
                 # Define the FFMPEG command to run
                 ffmpeg_cmd = '{} -re -f mjpeg -framerate {} -i {} -ar 44100 -ac 2 -acodec pcm_s16le -f s16le -ac 2 -i ' \
                              '/dev/zero -acodec aac -ab 128k -strict experimental -s {} -vcodec h264 -pix_fmt yuv420p ' \
-                             '-g 10 -vb 700k -framerate {} -f flv -filter:v {} {}'.format(FFMPEG,
+                             '-g 10 -vb 4000k -framerate {} -f flv -filter:v {} {}'.format(FFMPEG,
                                                                                           framerate,
                                                                                           webcam_stream,
                                                                                           stream_resolution,
