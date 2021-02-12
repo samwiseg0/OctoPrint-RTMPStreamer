@@ -2,8 +2,10 @@
 from __future__ import absolute_import
 
 import octoprint.plugin
+import os
+import signal
+import subprocess
 from octoprint.server import user_permission
-import docker
 
 
 class rtmpstreamer(octoprint.plugin.StartupPlugin,
